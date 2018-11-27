@@ -1,0 +1,327 @@
+#! /bin/bash
+
+###################################################################################
+# Author: Sean Kotrola                                                            #
+# Bash Script Assignment 1                                                        #
+# This Bash Script either creates, extracts, or views the contents of a tar file  #
+# CMSC 257                                                                        #
+# #################################################################################
+
+finish="false"
+currentDirectory=$(pwd)
+option=""
+
+###############################################
+# This Section Prompts the user for input     #
+# if they do not provide any initial arguments#
+###############################################
+
+while [ $finish == "false" ]; do
+if [ "$#" -eq 0 ] && [ "$option" == "" ] 
+then 
+	echo "Please input a command: Archive, Extract, or View"
+	read -p "vcutar>" option
+fi
+
+#########################################################################
+# Section 1: Archive                                                    #
+# The user is prompted to enter in tar options that will dictate the    #
+# options that the tar command uses,                                    #
+# enter in a source directory,                                          #
+# and then enter the files that they would like to put into the tarball.#
+# The user then inputs a name for the tarball and the file is created.  #
+#########################################################################
+
+if [ "${1,,}" == "archive" ] || [ "${option,,}" == "archive" ]
+then
+	
+	
+echo "
+	v – show the progress of archive file,
+	j – filter archive through bzip2.
+	z – filter archive through gzip.
+	r – append or update files or directories to existing archive file.
+	:q - Exit program
+"
+
+	read -p "vcutar>" tarOptions
+
+	######################################################
+	# Ensuring that the given tar command given is valid #
+	######################################################
+
+	if [ $tarOptions == ":q" ] ;then
+		exit
+	fi
+
+	if [[ $tarOptions != *"r"* ]] && [[ $tarOptions != *"c"* ]] ;then
+		tarOptions="c"$tarOptions
+	fi
+
+	if [[ $tarOptions != *"f"* ]] ;then
+		tarOptions=$tarOptions"f"
+	fi
+
+	########################################################
+	# Collecting and checking validity of source directory #
+	########################################################
+
+	endInput="false"
+        echo 'File or Directory to archive. ":q" to exit - ":a" to archive directory, list of files, or files.'
+	echo "Input the directory that you would like to archive from"
+	read -p "vcudirectory>" sourceDirectory	
+
+	if [ "$sourceDirectory" == ":q" ] ;then
+		exit
+
+	elif [ "$sourceDirectory" == ":a" ] ;then
+		endInput="true"
+		archiveFiles=$currentDirectory"/*"
+	
+	elif [ "$sourceDirectory" == '*' ] || [ $sourceDirectory == '' ] ;then
+                echo "current directory selected."
+                sourceDirectory="$currentDirectory"
+
+	elif [ -d $sourceDirectory ]; then
+		cd $sourceDirectory
+		pwd
+
+	elif [ ! -d $sourceDirectory ] ;then
+
+		#Prompting user to enter a valid directory
+		while [ ! -d $sourceDirectory ]; do
+
+			echo "Directory $sourceDirectory does not exist. Input new Directory:"
+			read -p "vcutar>" sourceDirectory
+			if [ $sourceDirectory = ":q" ] ;then
+				exit
+			fi
+		done
+	fi
+
+
+        while [ "$endInput" == "false" ]
+	do
+		
+		############################################################################
+		# These if statements are repeated before and after reading in a new file  #
+		# in order to ensure that both ":a" and ":q" are caught before reading     #
+		# in a new file or adding the nextFile to the list of archive files        #
+		############################################################################
+
+		if [ "$nextFile" == ":a" ] ;then
+			break
+
+		elif [ "$nextFile" == ":q" ] ;then
+			exit
+
+		fi
+		################################################################################
+		# Collecting files to put into tarball and ensuring that they are valid files  #
+		# Exits program on ":q" and stops collecting files on ":a"                     #
+		################################################################################
+	
+		echo "Input the file that you would like to archive: ":a" to archive ":q" to exit"
+		read -p "vcufile>" nextFile
+
+			
+          	if [ "$nextfile" == ":q" ] ;then
+                      	exit
+
+             	elif [ "$nextFile" == ":a" ] ;then
+                 	endInput="true"
+			break
+
+		elif [[ "$nextFile" == '*.'* ]] ;then
+			echo "All files of specified type selected"
+				
+
+		##########################################################################################
+		# This loop forces the user to input a valid file, archive command, or exit command      #
+		##########################################################################################
+	       	elif [ "$nextFile" != "*" ]; then 
+			if  [ ! -e "$nextFile" ] && [ "$nextFile" != ":a" ] && [ "$nextFile" != ":q" ] && [ "$nextFile" != "*" ]; then
+				while [ ! -e "$nextFile" ] && [ "$nextFile" != ":a" ] && [ "$nextFile" != ":q" ] && [ "$nextFile" != "*" ] && [[ "$nextFile" != '*.'* ]] ; do
+					echo "File or command does not exist. Try again"
+					read -p "vcutar>" nextFile
+				done
+			fi
+			
+		elif [  "$nextFile" == "*" ]; then
+			echo "Selected all files in " ;pwd 
+		fi
+
+		if [ "$nextFile" != ":a" ] && [ "$nextFile" != ":q" ]; then
+			archiveFiles=$archiveFiles$nextFile" "
+		fi
+			
+
+	done
+	
+	echo "Enter what you would like to name the archive file"
+	read -p "vcuarchive>" fileName
+
+
+	##################################################################
+ 	# If the desired file name does not have an extension		 #
+	# the user is notified and asked if they would like to add one   #
+	# If the user does want to add one, the program automatically    #
+	# chooses the relevant extension based on the tarOptions provided#
+	##################################################################
+
+	if [[ "$fileName" != *"."* ]] ;then
+		echo "File name does not have an extension. Would you like to add one? y or n"
+		read -p "vcutar>" extensionAnswer
+		if [ "${extensionAnswer,,}" == "y" ] ;then
+			if [[ "$tarOptions" == *"z"* ]] ;then
+				fileName=$fileName".tgz"
+				echo "File being compressed using gzip. File name changed to " $fileName
+			elif [[ "$tarOptions" == *"j"* ]] ;then
+				fileName=$fileName".tbz"
+				echo "File being compressed using bzip. File name changed to " $fileName
+			else
+				fileName=$fileName".tar"
+				echo "File name changed to " $fileName
+			fi
+		else
+				echo "File name not changed"
+		fi
+	fi
+
+	tar $tarOptions $fileName $archiveFiles
+
+
+	mv $fileName $currentDirectory
+
+	finish="true"
+
+
+###########################################################################
+# Section 2: Extract                                                      #
+# The user inputs the directory that the they would like ot extract to    #
+# The user then inputs the file that they would like to extract from      #
+###########################################################################
+
+elif [ "${1,,}" == "extract" ] || [ "${option,,}" == "extract" ]
+then
+
+	echo "Enter the name of the file you would like to extract"
+        read -p "vcutar extract>" extractFile
+	
+	#########################################
+	# Ensuring the file exists		#
+	#########################################
+
+        while [ ! -e $extractFile ]; do
+	        echo "File does not exist. Input new file"
+       		read -p "vcutar extract>" extractFile
+       	done
+
+        echo " Enter the directory that you would like to extract the file to"
+        read -p "vcutar archive>" targetDirectory
+
+	if [ "$targetDirectory" == "" ] || [ "$targetDirectory" == "*" ] ;then
+		targetDirecotry=$currentDirectory
+	fi
+
+	###################################
+	# Ensuring the directory is valid #
+	###################################
+
+        while [ ! -d $targetDirectory ]; do
+
+	        echo "Directory $targetDirectory does not exist. Input new Directory:"
+                read -p "vcutar>" targetDirectory
+        done
+
+
+	tarCommand=""	
+
+	
+	if [[ "$extractFile" == *".gz" ]] ;then
+		tarCommand="xvfz"
+
+	elif [[ "$extractFile" == *".bz" ]] ;then
+		tarCommand="xjvf"
+	else
+		tarCommand="xvf"
+	fi
+
+
+        tar $tarCommand  $extractFile -C $targetDirectory
+	
+
+	finish="true"
+
+
+#################################################################################################
+# Section 3: View                                                                               #
+# The user inputs the directory that contains the files that they want to view the contents of  #
+# The user then inputs the file name that they would like to view                               #
+# The contents of the file are displayed                                                        #
+#################################################################################################
+
+
+
+
+elif [ "${1,,}" == "view" ] || [ "${option,,}" == "view" ]
+then
+
+	echo "Input Source Directory"
+	read -p "vcutar view>" sourceDirectory
+
+	########################################
+	# Ensuring source directory is valid   #
+	########################################
+
+        while [ ! -d $sourceDirectory ]; do
+               echo "Directory $sourceDirectory does not exist. Input new Directory:"
+               read -p "vcutar view>" sourceDirectory
+        done
+
+        if [ "$sourceDirectory" != "" ];then
+                cd $sourceDirectory
+        fi
+
+
+	echo "Input name of tar file to view" 
+	read -p "vcutar view>" tarFile
+
+
+	#########################################
+	# Ensuring the given file exists	#
+	#########################################
+
+        while [ ! -e $tarFile ]; do
+                echo "File does not exist. Input new file"
+                read -p "vcutar view>" tarFile
+        done
+
+	tar tvf $tarFile
+
+	finish="true"
+
+########################
+# Exit command         #
+########################
+
+elif [ "${1,,}" == ":q" ] || [ "${option,,}" == ":q" ]
+then 
+	exit
+
+
+######################################################################
+# Checks to make sure that the option that the user inputs is valid  #
+######################################################################
+
+else
+	if [ "$option" != "" ] ;then
+		echo "Not a valid option. Please input a valid option: View, Archive, or Extract"
+		read -p "vcutar>" option
+	else 
+		echo "Not a valid option. Please input a valid option: View, Archive, or Extract"
+		read -p "vcutar>" option
+	fi
+fi
+
+done
