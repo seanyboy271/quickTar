@@ -2,6 +2,8 @@
 A Bash script designed to quickly create, extract, or a view a tar file
 
 ## Build container
-docker build -t tar -f dockerfile .
+`docker build -t tar -f dockerfile .`
 ## Run
-docker run -it tar
+`docker run -it tar`
+## Optional environmental variable
+`-e input={Archive/|Extract/|View}`
